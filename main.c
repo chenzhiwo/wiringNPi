@@ -10,65 +10,75 @@
 #include <fcntl.h>
 #include <math.h>
 
-
-//所有GPIO寄存器在物理内存的起始地址，注意这个地址只供mmap使用
-#define GPIO_PHY_BASE	0xC001A000
-#define MMAP_SIZE_GPIO	2058000
-
-//GPIO方向
-#define INPUT	0
-#define OUTPUT	1
-
-//GPIO电平
-#define HIGH	1
-#define LOW		0
-
 /*-----------------------------------------------------------------------------
- *  具体到GPIO端口的寄存器偏移值，GPIOA的地址就为GPIO + 0 * GPIO_X_OFFSET
- *  同理GPIOD就为GPIO + 3 * GPIO_X_OFFSET
+ *  GPIO_PHY_BASE :Only can be used by mmap. This is the first reg of GPIO
+ *  (GPIOAOUT)
  *-----------------------------------------------------------------------------*/
-#define GPIO_X_OFFSET 0x1000
+#define GPIO_PHY_BASE	(0xC001A000)
+#define GPIO_BASE_OFFSET (0x1000)
+#define MMAP_SIZE_GPIO	(2058000)
+#define GPIO_PAD_NUM	(5)
 
-#define	GPIOA_OFFSET	(0 * GPIO_X_OFFSET)
-#define	GPIOB_OFFSET	(1 * GPIO_X_OFFSET)
-#define	GPIOC_OFFSET	(2 * GPIO_X_OFFSET)
-#define	GPIOD_OFFSET	(3 * GPIO_X_OFFSET)
-#define	GPIOE_OFFSET	(4 * GPIO_X_OFFSET)
+#define ReadIO8(Addr)           (*( (reg8*)  (Addr) ))
+#define ReadIO16(Addr)          (*( (reg16*) (Addr) ))
+#define ReadIO32(Addr)          (*( (reg32*) (Addr) ))
 
-/*-----------------------------------------------------------------------------
- *  具体寄存器的偏移地址，如果要使用GPIOC的GPIOxALTFN0，那么就应该使用
- *-----------------------------------------------------------------------------*/
-#define GPIOxOUT		0x00
-#define GPIOxOUTENB		0x04
-#define GPIOxDETMODE0	0x08
-#define GPIOxDETMODE1	0x0C
-#define GPIOxINTENB		0x10
-#define GPIOxDET		0x14
-#define GPIOxPAD		0x18
-#define GPIOxALTFN0		0x20
-#define GPIOxALTFN1		0x24
-#define GPIOxDETMODEEX	0x28
-#define GPIOxDETENB		0x3c
-#define GPIOx_SLEW		0x40
-#define GPIOx_DRV1		0x48
-#define GPIOx_DRV0		0x50
-#define GPIOx_PULLSEL	0x58
-#define GPIOx_PULLENB	0x60
-#define GPIOx_PULLENB_DISABLE_DEFAULT	0x64
-#define GPIOx_SLEW_DISABLE_DEFAULT		0x44
-#define GPIOx_DRV1_DISABLE_DEFAULT		0x4c
-#define GPIOx_DRV0_DISABLE_DEFAULT		0x54
-#define GPIOx_PULLSEL_DISABLE_DEFAULT	0x5C
+#define WriteIO8(Addr,Data)     (*( (reg8*)  (Addr) ))  =  ( (reg8)  (Data))
+#define WriteIO16(Addr,Data)    (*( (reg16*) (Addr) ))  =  ( (reg16) (Data))
+#define WriteIO32(Addr,Data)    (*( (reg32*) (Addr) ))  =  ( (reg32) (Data))
 
+#define SetIO8(Addr,Data)       (*( (reg8*)  (Addr) )) |=  ( (reg8)  (Data))
+#define SetIO16(Addr,Data)      (*( (reg16*) (Addr) )) |=  ( (reg16) (Data))
+#define SetIO32(Addr,Data)      (*( (reg32*) (Addr) )) |=  ( (reg32) (Data))
 
-/*-----------------------------------------------------------------------------
- *  由于寄存器都是32位的，所以把指针定义为32位长度的无符号整数，那么根据一定的
- *  偏移值就可以读写某个寄存器的所有内容
- *-----------------------------------------------------------------------------*/
-static volatile uint32_t GPIO = -1;
+#define ClearIO8(Addr,Data)     (*( (reg8*)  (Addr) )) &= ~( (reg8)  (Data))
+#define ClearIO16(Addr,Data)    (*( (reg16*) (Addr) )) &= ~( (reg16) (Data))
+#define ClearIO32(Addr,Data)    (*( (reg32*) (Addr) )) &= ~( (reg32) (Data))
+
+typedef volatile uint8_t	reg8;   
+typedef volatile uint16_t	reg16;  
+typedef volatile uint32_t	reg32;
+
+struct  GPIO_registers
+{
+	reg32 GPIOxOUT;						  ///< 0x00   : Output Register
+	reg32 GPIOxOUTENB;       			  ///< 0x04   : Output Enable Register
+	reg32 GPIOxDETMODE[2];   			  ///< 0x08   : Event Detect Mode Register
+	reg32 GPIOxINTENB;       			  ///< 0x10   : Interrupt Enable Register
+	reg32 GPIOxDET;          			  ///< 0x14   : Event Detect Register
+	reg32 GPIOxPAD;          			  ///< 0x18   : PAD Status Register
+	reg32 GPIOxPUENB;        			  ///< 0x1C   : Pull Up Enable Register
+	reg32 GPIOxALTFN[2];     			  ///< 0x20   : Alternate Function Select Register
+	reg32 GPIOxDETMODEEX;    			  ///< 0x28   : Event Detect Mode extended Register
+	reg32 Reserved0[4];     			  ///< 0x2B   :
+	reg32 GPIOxDETENB;       			  ///< 0x3C   : IntPend Detect Enable Register
+	reg32 GPIOx_SLEW;                     ///< 0x40   : Slew Register
+	reg32 GPIOx_SLEW_DISABLE_DEFAULT;     ///< 0x44   : Slew set On/Off Register
+	reg32 GPIOx_DRV1;                     ///< 0x48   : drive strength LSB Register
+	reg32 GPIOx_DRV1_DISABLE_DEFAULT;     ///< 0x4C   : drive strength LSB set On/Off Register
+	reg32 GPIOx_DRV0;                     ///< 0x50   : drive strength MSB Register
+	reg32 GPIOx_DRV0_DISABLE_DEFAULT;     ///< 0x54   : drive strength MSB set On/Off Register
+	reg32 GPIOx_PULLSEL;                  ///< 0x58   : Pull UP/DOWN Selection Register
+	reg32 GPIOx_PULLSEL_DISABLE_DEFAULT;  ///< 0x5C   : Pull UP/DOWN Selection On/Off Register
+	reg32 GPIOx_PULLENB;                  ///< 0x60   : Pull Enable/Disable Register
+	reg32 GPIOx_PULLENB_DISABLE_DEFAULT;  ///< 0x64   : Pull Enable/Disable selection On/Off Register
+	reg32 GPIOx_InputMuxSelect0;          ///< 0x68
+	reg32 GPIOx_InputMuxSelect1;          ///< 0x6C
+	reg8  Reserved1[0x1000-0x70];
+};
+
+enum GPIO_X 
+{
+	GPIOA = 0, GPIOB, GPIOC, GPIOD, GPIOE
+};
+
+int fd_mem = -1;
+struct GPIO_registers *GPIO_MAPPED_ADDR = NULL;
+struct GPIO_registers *GPIO[GPIO_PAD_NUM] = {};
+char logbuf[1024] = "";
 
 //根据wiringPi管脚编号取得对应的物理管脚的编号
-const int wiringPitoNpi[] = {
+const int wiringPitoGPIO[] = {
 	61, 58, 62, 63, 78, 59, 
 	97, 60, -1, -1, 94, 77,
 	95, 96, 93, 117, 113, -1,
@@ -76,92 +86,62 @@ const int wiringPitoNpi[] = {
 	76, 75, 92, 71, -1, -1, -1
 };
 
-//每个管脚的bit的位置
-const int wiring_pin_bit[] = {
-	0x20000000, 0x4000000, 0x40000000, 0x80000000,
-	0x4000, 0x8000000, 0x2, 0x10000000, -1,
-	-1, 0x40000000, 0x2000, 0x80000000, 0x1,
-	0x20000000, 0x200000, 0x20000, -1, -1,
-	-1, -1, 0x100, 0x200, 0x400,
-	0x1000, 0x800, 0x10000000, 0x80, -1,
-	-1, -1 
-};
-
-
-//根据wiringPi管脚编号取得对应的GPIO端口的第一个寄存器的偏移地址
-const int wiring_reg_addr[] = {
-	GPIOB_OFFSET,
-	GPIOB_OFFSET,
-	GPIOB_OFFSET,
-	GPIOB_OFFSET,
-	GPIOC_OFFSET,
-	GPIOB_OFFSET,
-	GPIOD_OFFSET,
-	GPIOB_OFFSET,
-	-1,
-	-1,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOD_OFFSET,
-	GPIOC_OFFSET,
-	GPIOD_OFFSET,
-	GPIOD_OFFSET,
-	-1,
-	-1,
-	-1,
-	-1,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	GPIOC_OFFSET,
-	-1,
-	-1,
-	-1
-};
 
 void logger(char msg[])
 {
-	printf("LOG:%s\n", msg);
+	fprintf(stderr, "LOG:%s\n", msg);
 }
 
 void error(char msg[])
 {
-	printf("ERR:%s errno:%s\n", msg, strerror(errno));
+	fprintf(stderr, "ERR:%s errno:%s\n", msg, strerror(errno));
 	exit(1);
 }
 
-int main(int argc, char * argv[])
+void mem_open(void)
 {
-
-	int fd_mem = 0;
-
 	fd_mem = open("/dev/mem", O_RDWR | O_NDELAY);
 	if(-1 == fd_mem)
 	{
 		error("Can't open /dev/mem.");
 	}
 
-	GPIO = (unsigned int ) mmap(0 , 
-			MMAP_SIZE_GPIO, PROT_READ | PROT_WRITE, MAP_SHARED, fd_mem, GPIO_PHY_BASE);
-	if(-1 == (int) GPIO)
+	GPIO_MAPPED_ADDR = mmap(0 , MMAP_SIZE_GPIO,
+		   	PROT_READ | PROT_WRITE, MAP_SHARED, fd_mem, GPIO_PHY_BASE);
+	sprintf(logbuf, "GPIO_MAPPED_ADDR:%p",  GPIO_MAPPED_ADDR);
+	logger(logbuf);
+
+	int offset = 0;
+	for(offset = 0; offset < GPIO_PAD_NUM; offset++)
 	{
-		error("Can't mmap.");
+		GPIO[offset] = (struct GPIO_registers*) ( (uint32_t) GPIO_MAPPED_ADDR + (offset * GPIO_PHY_BASE));
 	}
 
-	char *abcde[] = {"A", "B", "C", "D", "E"};
+}
 
-	int i = 0;
-	for(i = 0; i <= 30; i++)
+void mem_close(void)
+{
+	if(-1 != fd_mem)
 	{
-		printf("wiring:%2d num:%3d GPIO:%s%2d %f\n", i, wiringPitoNpi[i], abcde[wiringPitoNpi[i] / 32], wiringPitoNpi[i] % 32, log2(wiring_pin_bit[i]));
+		munmap( (void *) GPIO_MAPPED_ADDR, MMAP_SIZE_GPIO);
+		close(fd_mem);
 	}
+	else
+	{
+		logger("can't munmap a unmapped memory");
+	}
+}
 
-	munmap( (void *) GPIO, MMAP_SIZE_GPIO);
-	close(fd_mem);
+int main(int argc, char * argv[])
+{
+	mem_open();
+
+	WriteIO32(GPIO[GPIOA], 0xaaaa);
+	printf("ADDR:%p -> %x\n", GPIO[GPIOA], GPIO[GPIOA]->GPIOxOUT);
+	WriteIO32(GPIO[GPIOA], 0xaaaaaa);
+	printf("ADDR:%p -> %x\n", GPIO[GPIOA], GPIO[GPIOA]->GPIOxOUT);
+
+	mem_close();
 
 	return EXIT_SUCCESS;
 }

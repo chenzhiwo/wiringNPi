@@ -1,7 +1,7 @@
 PROG_NAME=main
 
 CC=gcc
-CFLAGS=-O3 -Wall
+CFLAGS=-O0 -Wall
 LDFLAGS=-lm
 
 .PHONY:clean rebuild exec debug
