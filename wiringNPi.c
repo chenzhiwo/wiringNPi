@@ -111,7 +111,8 @@ const enum GPIO_ALTFNS GPIO_ALTFN[GPIO_NUM_PAD][GPIO_NUM_PER_PAD] = {
 #define gpio_pad(gpio)			( ((gpio) >> 5) & 0B111)
 #define gpio_bit(gpio)			( (gpio) & 0B11111)
 
-int gpio_mem_fd = -1;
+int gpio_dev_fd = -1;
+int pwm_dev_fd = -1;
 struct gpio_registers *gpio_MAPPED_ADDR = NULL;
 struct gpio_registers *GPIO[GPIO_NUM_PAD] = {};
 char logbuf[1024] = "";
@@ -128,17 +129,17 @@ static void error(char msg[])
 }
 
 // static functions
-static inline void gpio_mem_open(void)
+static inline void gpio_dev_open(void)
 {
 	int offset = 0;
-	gpio_mem_fd = open("/dev/mem", O_RDWR | O_NDELAY);
-	if(-1 == gpio_mem_fd)
+	gpio_dev_fd = open("/dev/mem", O_RDWR | O_NDELAY);
+	if(-1 == gpio_dev_fd)
 	{
 		error("Can't open /dev/mem.");
 	}
 
 	gpio_MAPPED_ADDR = mmap(0 , GPIO_MMAP_SIZE,
-			PROT_READ | PROT_WRITE, MAP_SHARED, gpio_mem_fd, GPIO_PHY_BASE);
+			PROT_READ | PROT_WRITE, MAP_SHARED, gpio_dev_fd, GPIO_PHY_BASE);
 	sprintf(logbuf, "gpio_MAPPED_ADDR:%p",  gpio_MAPPED_ADDR);
 	logger(logbuf);
 
@@ -149,12 +150,12 @@ static inline void gpio_mem_open(void)
 
 }
 
-static inline void gpio_mem_close(void)
+static inline void gpio_dev_close(void)
 {
-	if(-1 != gpio_mem_fd)
+	if(-1 != gpio_dev_fd)
 	{
 		munmap( (void *) gpio_MAPPED_ADDR, GPIO_MMAP_SIZE);
-		close(gpio_mem_fd);
+		close(gpio_dev_fd);
 	}
 	else
 	{
@@ -203,6 +204,26 @@ static inline void gpio_set_altfn_gpio(uint pin)
 	gpio_reg2_set_bit2(&GPIO[pad]->GPIOxALTFN[0], bit, GPIO_ALTFN[pad][bit]);
 }
 
+static inline void pwm_dev_open(void)
+{
+	pwm_dev_fd = open("/dev/pwm", O_RDONLY);
+	if(-1 == pwm_dev_fd)
+	{
+		error("Can't open /dev/pwm.");
+	}
+}
+
+static inline void pwm_dev_close(void)
+{
+	if(-1 != pwm_dev_fd)
+	{
+		close(pwm_dev_fd);
+	}
+	else
+	{
+		logger("can't close /dev/pwm");
+	}
+}
 
 //public function
 
@@ -250,12 +271,14 @@ void delayMicroseconds (unsigned int howLong)
 
 void wiringNPiSetup(void)
 {
-	gpio_mem_open();
+	gpio_dev_open();
+	pwm_dev_open();
 }
 
 void wiringNPiExit(void)
 {
-	gpio_mem_close();
+	gpio_dev_close();
+	pwm_dev_close();
 }
 
 void pinMode(uint pin, enum DIRECTION dire)
@@ -288,3 +311,22 @@ uint digitalRead(uint pin)
 	return gpio_reg_get_bit(&GPIO[gpio_pad(pin)]->GPIOxPAD, gpio_bit(pin)) ;
 }
 
+void analogWrite(uint pin, uint freq, uint duty)
+{
+	uint pwm_args[3] = {};
+	pwm_args[0] = pin;
+	pwm_args[1] = freq;
+	pwm_args[2] = duty;
+	if(-1 == ioctl(pwm_dev_fd, PWM_IOCTL_SET_FREQ, pwm_args))
+	{
+		logger("fail to set pwm");
+	}
+}
+
+void analogStop(uint pin)
+{
+	if(-1 == ioctl(pwm_dev_fd, PWM_IOCTL_STOP, &pin))
+	{
+		logger("fail to stop pwm");
+	}
+}

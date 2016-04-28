@@ -16,7 +16,15 @@ int main(int argc, char * argv[])
 		digitalWrite(PIN, HIGH);
 		digitalWrite(PIN, LOW);
 	}
+	for(i = 0; i < 5; i++)
+	{
+		analogWrite(PWM0, 1000000, 200);
+		delay(1000);
+		analogWrite(PWM0, 1000000, 900);
+		delay(1000);
+	}
 
+	analogStop(PWM0);
 	wiringNPiExit();
 
 	return EXIT_SUCCESS;
