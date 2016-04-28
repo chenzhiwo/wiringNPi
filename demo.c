@@ -1,23 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "wiringNPi.h"
+#include <wiringNPi.h>
 
 
 int main(int argc, char * argv[])
 {
-#define PIN GPIOD(1)
+#define PIN GPIOC(12)
 
 	int i = 0;
-	gpio_init();
+	wiringNPiSetup();
 
 	pinMode(PIN, OUTPUT);
-	for(i = 0; i < 2000000; i++)
+	for(i = 0; i < 100000; i++)
 	{
 		digitalWrite(PIN, HIGH);
 		digitalWrite(PIN, LOW);
 	}
 
-	gpio_deinit();
+	wiringNPiExit();
 
 	return EXIT_SUCCESS;
 

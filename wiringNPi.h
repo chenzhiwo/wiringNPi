@@ -10,7 +10,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <fcntl.h>
+#include <time.h>
 #include <math.h>
 
 #define GPIOA(pin)	(0   + (pin))
@@ -34,8 +36,11 @@ enum DIRECTION {
 	INPUT = 0, OUTPUT = 1
 };
 
-void gpio_init(void);
-void gpio_deinit(void);
+void delay (unsigned int howLong);
+void delayMicrosecondsHard (unsigned int howLong);
+void delayMicroseconds (unsigned int howLong);
+void wiringNPiSetup(void);
+void wiringNPiExit(void);
 void pinMode(uint pin, enum DIRECTION dire);
 void digitalWrite(uint pin, enum LEVEL level);
 uint digitalRead(uint pin);
