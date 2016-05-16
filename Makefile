@@ -3,13 +3,12 @@ DEMO_NAME=demo
 PERFIX=/usr
 
 CC=gcc
-CFLAGS=-O3 -Wall
+CFLAGS=-O0 -Wall
 LIB_CFLAGS=$(CFLAGS) -shared -fPIC
 LDFLAGS=
 DEMO_FLAGS=-lwiringNPi
 
 .PHONY:clean rebuild exec debug install
-
 all:$(LIB_NAME)
 
 clean:
@@ -22,7 +21,7 @@ exec:all install $(DEMO_NAME)
 	./$(DEMO_NAME)
 
 debug:CFLAGS+=-g
-debug:rebuild
+debug:rebuild demo
 	gdb ./$(DEMO_NAME)
 
 install:$(LIB_NAME)
@@ -38,7 +37,7 @@ uninstall:
 $(LIB_NAME):wiringNPi.o wiringNPiSPI.o elinux.o
 	$(CC) $^ -o $@ $(LIB_CFLAGS)
 
-$(DEMO_NAME):demo.o
+$(DEMO_NAME):demo.o wiringNPi.o wiringNPiSPI.o
 	$(CC) $^ -o $@  $(DEMO_FLAGS)
 	
 

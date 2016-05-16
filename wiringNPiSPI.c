@@ -30,7 +30,7 @@ int wiringNPiSPIDataRW (int channel, unsigned char *data, int len)
 	channel &= 0B11;
 
 	spi_data.tx_buf = (unsigned long) data;
-	spi_data.tx_buf = (unsigned long) data;
+	spi_data.rx_buf = (unsigned long) data;
 	spi_data.len = len;
 	spi_data.delay_usecs = 0;
 	spi_data.speed_hz = spi_speeds[channel];
@@ -98,6 +98,8 @@ int wiringNPiSPISetup (int channel, int speed)
 		return -1;
 	}
 	spi_fds[channel] = fd;
+
+	//Set default SPI Mode to Mode0.
 	wiringNPiSPISetupMode(channel, speed, SPI_MODE_0);
 
 	return 0;
