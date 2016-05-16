@@ -22,23 +22,34 @@ exec:all install $(DEMO_NAME)
 	./$(DEMO_NAME)
 
 debug:CFLAGS+=-g
-debug:rebuil
+debug:rebuild
 	gdb ./$(DEMO_NAME)
 
 install:$(LIB_NAME)
 	install --mode=0644 wiringNPi.h  $(PERFIX)/include/
+	install --mode=0644 wiringNPiSPI.h  $(PERFIX)/include/
 	install --mode=0644 libwiringNPi.so $(PERFIX)/lib/
 
 uninstall:
 	-rm  $(PERFIX)/include/wiringNPi.h
+	-rm  $(PERFIX)/include/wiringNPiSPI.h
 	-rm  $(PERFIX)/lib/libwiringNPi.so
 
-$(LIB_NAME):wiringNPi.o
+$(LIB_NAME):wiringNPi.o wiringNPiSPI.o elinux.o
 	$(CC) $^ -o $@ $(LIB_CFLAGS)
 
 $(DEMO_NAME):demo.o
 	$(CC) $^ -o $@  $(DEMO_FLAGS)
 	
-demo.o: demo.c wiringNPi.h
-wiringNPi.o: wiringNPi.c wiringNPi.h
+
+wiringNPi.o: wiringNPi.c wiringNPi.h elinux.h
 	$(CC) -c $< $(LIB_CFLAGS)
+
+wiringNPiSPI.o: wiringNPiSPI.c wiringNPiSPI.h elinux.h
+	$(CC) -c $< $(LIB_CFLAGS)
+
+elinux.o: elinux.c elinux.h
+	$(CC) -c $< $(LIB_CFLAGS)
+
+demo.o: demo.c wiringNPi.h
+

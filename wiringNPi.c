@@ -1,4 +1,5 @@
 #include "wiringNPi.h"
+#include "elinux.h"
 
 typedef volatile uint8_t	reg8;
 typedef volatile uint32_t	reg32;
@@ -115,18 +116,6 @@ int gpio_dev_fd = -1;
 int pwm_dev_fd = -1;
 struct gpio_registers *gpio_MAPPED_ADDR = NULL;
 struct gpio_registers *GPIO[GPIO_NUM_PAD] = {};
-char logbuf[1024] = "";
-
-static void logger(char msg[])
-{
-	fprintf(stderr, "LOG:%s\n", msg);
-}
-
-static void error(char msg[])
-{
-	fprintf(stderr, "ERR:%s errno:%s\n", msg, strerror(errno));
-	exit(1);
-}
 
 // static functions
 static inline void gpio_dev_open(void)
