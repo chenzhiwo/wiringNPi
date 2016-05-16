@@ -5,6 +5,7 @@ PERFIX=/usr
 CC=gcc
 CFLAGS=-O0 -Wall
 LIB_CFLAGS=$(CFLAGS) -shared -fPIC
+DEBUG_FLAGS=-g -DDEBUG
 LDFLAGS=
 DEMO_FLAGS=-lwiringNPi
 
@@ -20,7 +21,7 @@ rebuild:clean all
 exec:all install $(DEMO_NAME)
 	./$(DEMO_NAME)
 
-debug:CFLAGS+=-g
+debug:CFLAGS+=$(DEBUG_FLAGS)
 debug:rebuild demo
 	gdb ./$(DEMO_NAME)
 
@@ -34,20 +35,17 @@ uninstall:
 	-rm  $(PERFIX)/include/wiringNPiSPI.h
 	-rm  $(PERFIX)/lib/libwiringNPi.so
 
-$(LIB_NAME):wiringNPi.o wiringNPiSPI.o elinux.o
+$(LIB_NAME):wiringNPi.o wiringNPiSPI.o
 	$(CC) $^ -o $@ $(LIB_CFLAGS)
 
 $(DEMO_NAME):demo.o wiringNPi.o wiringNPiSPI.o
 	$(CC) $^ -o $@  $(DEMO_FLAGS)
-	
+
 
 wiringNPi.o: wiringNPi.c wiringNPi.h elinux.h
 	$(CC) -c $< $(LIB_CFLAGS)
 
 wiringNPiSPI.o: wiringNPiSPI.c wiringNPiSPI.h elinux.h
-	$(CC) -c $< $(LIB_CFLAGS)
-
-elinux.o: elinux.c elinux.h
 	$(CC) -c $< $(LIB_CFLAGS)
 
 demo.o: demo.c wiringNPi.h

@@ -6,9 +6,24 @@
 #include <errno.h>
 #include <string.h>
 
-extern char logbuf[1024]; 
+#define logger(msg)	do{\
+	fprintf(stderr, "LOG: %s\n", msg);\
+}while(0);
 
-void logger(char msg[]);
-void error(char msg[]);
+#define error(msg) do{\
+	fprintf(stderr, "ERR: %s ERRON: %s\n", msg, strerror(errno));\
+	exit(1);\
+}while(0);
+
+#ifdef DEBUG
+#define debug(msg) do{\
+	fprintf(stderr, "DEBUG: %s\n", msg);\
+}while(0);
+
+#else
+#define debug(msg)
+#endif
+
 
 #endif
+

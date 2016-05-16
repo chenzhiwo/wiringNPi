@@ -114,27 +114,29 @@ const enum GPIO_ALTFNS GPIO_ALTFN[GPIO_NUM_PAD][GPIO_NUM_PER_PAD] = {
 
 int gpio_dev_fd = -1;
 int pwm_dev_fd = -1;
-struct gpio_registers *gpio_MAPPED_ADDR = NULL;
+struct gpio_registers *GPIO_MAPPED_ADDR = NULL;
 struct gpio_registers *GPIO[GPIO_NUM_PAD] = {};
 
 // static functions
 static inline void gpio_dev_open(void)
 {
 	int offset = 0;
+	char logbuf[100] = {};
+
 	gpio_dev_fd = open("/dev/mem", O_RDWR | O_NDELAY);
 	if(-1 == gpio_dev_fd)
 	{
 		error("Can't open /dev/mem.");
 	}
 
-	gpio_MAPPED_ADDR = mmap(0 , GPIO_MMAP_SIZE,
+	GPIO_MAPPED_ADDR = mmap(0 , GPIO_MMAP_SIZE,
 			PROT_READ | PROT_WRITE, MAP_SHARED, gpio_dev_fd, GPIO_PHY_BASE);
-	sprintf(logbuf, "gpio_MAPPED_ADDR:%p",  gpio_MAPPED_ADDR);
-	logger(logbuf);
+	sprintf(logbuf, "GPIO_MAPPED_ADDR:%p",  GPIO_MAPPED_ADDR);
+	debug(logbuf);
 
 	for(offset = 0; offset < GPIO_NUM_PAD; offset++)
 	{
-		GPIO[offset] = (struct gpio_registers*) ( (uint32_t) gpio_MAPPED_ADDR + (offset * GPIO_BASE_OFFSET));
+		GPIO[offset] = (struct gpio_registers*) ( (uint32_t) GPIO_MAPPED_ADDR + (offset * GPIO_BASE_OFFSET));
 	}
 
 }
@@ -143,7 +145,7 @@ static inline void gpio_dev_close(void)
 {
 	if(-1 != gpio_dev_fd)
 	{
-		munmap( (void *) gpio_MAPPED_ADDR, GPIO_MMAP_SIZE);
+		munmap( (void *) GPIO_MAPPED_ADDR, GPIO_MMAP_SIZE);
 		close(gpio_dev_fd);
 	}
 	else

@@ -8,6 +8,7 @@ int main(int argc, char * argv[])
 {
 	int i = 0;
 
+	wiringNPiSetup();
 	wiringNPiSPISetup(SPI0_CHANNEL0, 100000);
 
 	unsigned char spi_buf[100] = {};
